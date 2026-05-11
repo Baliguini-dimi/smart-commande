@@ -10,19 +10,22 @@ return new class extends Migration
     {
         Schema::create('subscriptions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('restaurant_id')
-                  ->constrained()
-                  ->onDelete('cascade');
-            $table->foreignId('plan_id')
-                  ->constrained()
-                  ->onDelete('cascade');
-            $table->timestamp('starts_at');
-            $table->timestamp('expires_at');
-            $table->enum('status', ['active', 'expired', 'cancelled'])
-                  ->default('active');
-            $table->string('payment_ref')->nullable(); // Référence du paiement
-            $table->decimal('amount_paid', 10, 0);    // Montant payé en FCFA
+            $table->unsignedBigInteger('restaurant_id');
+            $table->unsignedBigInteger('plan_id');
+            $table->datetime('starts_at');      // datetime au lieu de timestamp
+            $table->datetime('expires_at');     // datetime au lieu de timestamp
+            $table->enum('status', ['active', 'expired', 'cancelled'])->default('active');
+            $table->string('payment_ref')->nullable();
+            $table->decimal('amount_paid', 10, 0);
             $table->timestamps();
+
+            $table->foreign('restaurant_id')
+                  ->references('id')->on('restaurants')
+                  ->onDelete('cascade');
+
+            $table->foreign('plan_id')
+                  ->references('id')->on('plans')
+                  ->onDelete('cascade');
         });
     }
 

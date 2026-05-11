@@ -14,12 +14,34 @@ require __DIR__.'/auth.php';
 // ─── Dashboard Gérant ────────────────────────────────────
 Route::middleware(['auth', 'gerant'])->prefix('dashboard')->name('gerant.')->group(function () {
 
-    Route::get('/', function () {
-        return view('gerant.dashboard');
-    })->name('dashboard');
+    // Tableau de bord
+    Route::get('/', [App\Http\Controllers\Gerant\DashboardController::class, 'index'])
+         ->name('dashboard');
 
+    // Commandes
+    Route::resource('orders', App\Http\Controllers\Gerant\OrderController::class)
+         ->only(['index', 'show', 'update']);
+
+    // Menus
+    Route::resource('menus', App\Http\Controllers\Gerant\MenuController::class);
+
+    // Tables
+    Route::resource('tables', App\Http\Controllers\Gerant\TableController::class);
+
+    // Statistiques
+    Route::get('/analytics', [App\Http\Controllers\Gerant\DashboardController::class, 'analytics'])
+         ->name('analytics');
+
+    // Restaurant
+    Route::get('/restaurant/edit', [App\Http\Controllers\Gerant\RestaurantController::class, 'edit'])
+         ->name('restaurant.edit');
+    Route::put('/restaurant', [App\Http\Controllers\Gerant\RestaurantController::class, 'update'])
+         ->name('restaurant.update');
+
+    // Abonnement
+    Route::get('/subscription', [App\Http\Controllers\Gerant\SubscriptionController::class, 'index'])
+         ->name('subscription');
 });
-
 // ─── Panel Super Admin ───────────────────────────────────
 Route::middleware(['auth', 'super_admin'])->prefix('admin')->name('admin.')->group(function () {
 
