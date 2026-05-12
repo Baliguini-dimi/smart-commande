@@ -8,20 +8,35 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
-    // ── Liste de toutes les commandes ─────────────────
     public function index()
     {
         $restaurant = auth()->user()->restaurant;
+        $status     = request('status', 'all');
 
-        $orders = Order::where('restaurant_id', $restaurant->id)
+        $query = Order::where('restaurant_id', $restaurant->id)
             ->with(['orderItems.dish', 'restaurantTable'])
-            ->latest()
-            ->paginate(20);
+            ->latest();
 
-        return view('gerant.orders.index', compact('orders'));
+        // Filtre par statut
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        $orders = $query->paginate(15);
+
+        // Compteurs par statut
+        $counts = [
+            'pending'   => Order::where('restaurant_id', $restaurant->id)->where('status', 'pending')->count(),
+            'preparing' => Order::where('restaurant_id', $restaurant->id)->where('status', 'preparing')->count(),
+            'ready'     => Order::where('restaurant_id', $restaurant->id)->where('status', 'ready')->count(),
+            'served'    => Order::where('restaurant_id', $restaurant->id)->where('status', 'served')->count(),
+        ];
+
+        $pendingOrdersCount = $counts['pending'];
+
+        return view('gerant.orders.index', compact('orders', 'counts', 'pendingOrdersCount'));
     }
 
-    // ── Mettre à jour le statut d'une commande ────────
     public function updateStatus(Request $request, Order $order)
     {
         // Vérifie que la commande appartient au restaurant du gérant
@@ -35,15 +50,10 @@ class OrderController extends Controller
 
         $order->update(['status' => $request->status]);
 
-        // Réponse JSON pour les requêtes AJAX
-        if ($request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'status'  => $order->status,
-                'message' => 'Statut mis à jour.',
-            ]);
-        }
-
-        return back()->with('success', 'Statut de la commande mis à jour.');
+        return response()->json([
+            'success' => true,
+            'status'  => $order->status,
+            'message' => 'Statut mis à jour.',
+        ]);
     }
 }
