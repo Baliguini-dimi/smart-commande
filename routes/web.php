@@ -72,3 +72,21 @@ Route::middleware(['auth', 'super_admin'])
 Route::get('/menu/{slug}/table/{tableNumber}', function ($slug, $tableNumber) {
     return view('client.menu', compact('slug', 'tableNumber'));
 })->name('client.menu');
+// ─── Interface Client ─────────────────────────────────────
+Route::prefix('menu')->name('client.')->group(function () {
+
+    // Page menu + commande
+    Route::get('/{slug}/table/{tableNumber}',
+        [App\Http\Controllers\Client\MenuController::class, 'show'])
+        ->name('menu');
+
+    // Soumettre une commande
+    Route::post('/{slug}/table/{tableNumber}/order',
+        [App\Http\Controllers\Client\MenuController::class, 'placeOrder'])
+        ->name('order');
+
+    // Statut d'une commande
+    Route::get('/order/{orderId}/status',
+        [App\Http\Controllers\Client\MenuController::class, 'orderStatus'])
+        ->name('order.status');
+});
