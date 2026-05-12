@@ -12,7 +12,10 @@ Route::get('/', function () {
 require __DIR__.'/auth.php';
 
 // ─── Dashboard Gérant ────────────────────────────────────
-Route::middleware(['auth', 'gerant'])->prefix('dashboard')->name('gerant.')->group(function () {
+Route::middleware(['auth', 'gerant'])
+    ->prefix('dashboard')
+    ->name('gerant.')
+    ->group(function () {
 
     // Tableau de bord
     Route::get('/', [App\Http\Controllers\Gerant\DashboardController::class, 'index'])
@@ -28,22 +31,36 @@ Route::middleware(['auth', 'gerant'])->prefix('dashboard')->name('gerant.')->gro
     // Tables
     Route::resource('tables', App\Http\Controllers\Gerant\TableController::class);
 
+    // Regénérer QR code d'une table
+    Route::post('/tables/{table}/regenerate',
+        [App\Http\Controllers\Gerant\TableController::class, 'regenerateQr'])
+        ->name('tables.regenerate');
+
     // Statistiques
-    Route::get('/analytics', [App\Http\Controllers\Gerant\DashboardController::class, 'analytics'])
+    Route::get('/analytics',
+        [App\Http\Controllers\Gerant\DashboardController::class, 'analytics'])
          ->name('analytics');
 
     // Restaurant
-    Route::get('/restaurant/edit', [App\Http\Controllers\Gerant\RestaurantController::class, 'edit'])
+    Route::get('/restaurant/edit',
+        [App\Http\Controllers\Gerant\RestaurantController::class, 'edit'])
          ->name('restaurant.edit');
-    Route::put('/restaurant', [App\Http\Controllers\Gerant\RestaurantController::class, 'update'])
+
+    Route::put('/restaurant',
+        [App\Http\Controllers\Gerant\RestaurantController::class, 'update'])
          ->name('restaurant.update');
 
     // Abonnement
-    Route::get('/subscription', [App\Http\Controllers\Gerant\SubscriptionController::class, 'index'])
+    Route::get('/subscription',
+        [App\Http\Controllers\Gerant\SubscriptionController::class, 'index'])
          ->name('subscription');
 });
+
 // ─── Panel Super Admin ───────────────────────────────────
-Route::middleware(['auth', 'super_admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'super_admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
 
     Route::get('/', function () {
         return view('admin.dashboard');
