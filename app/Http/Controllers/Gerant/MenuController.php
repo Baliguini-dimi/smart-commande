@@ -54,14 +54,14 @@ class MenuController extends Controller
 
     public function show(Menu $menu)
     {
-        $this->authorize('view', $menu);
+        $this->checkOwnership($menu);
         $menu->load(['categories.dishes']);
         return view('gerant.menus.show', compact('menu'));
     }
 
     public function update(Request $request, Menu $menu)
     {
-        $this->authorize('update', $menu);
+        $this->checkOwnership($menu);
         $menu->update(['is_active' => !$menu->is_active]);
         $status = $menu->is_active ? 'activé' : 'désactivé';
         return back()->with('success', "Menu $status.");
@@ -69,7 +69,7 @@ class MenuController extends Controller
 
     public function destroy(Menu $menu)
     {
-        $this->authorize('delete', $menu);
+        $this->checkOwnership($menu);
         $menu->delete();
         return redirect()->route('gerant.menus.index')
                ->with('success', 'Menu supprimé.');
@@ -77,7 +77,7 @@ class MenuController extends Controller
 
     public function storeCategory(Request $request, Menu $menu)
     {
-        $this->authorize('update', $menu);
+        $this->checkOwnership($menu);
         $request->validate(['name' => 'required|string|max:100']);
 
         Category::create([
@@ -92,14 +92,14 @@ class MenuController extends Controller
 
     public function destroyCategory(Category $category)
     {
-        $this->authorize('update', $category->menu);
+        $this->checkOwnership($category->menu);
         $category->delete();
         return back()->with('success', 'Catégorie supprimée.');
     }
 
     public function storeDish(Request $request, Category $category)
     {
-        $this->authorize('update', $category->menu);
+        $this->checkOwnership($category->menu);
 
         $request->validate([
             'name'  => 'required|string|max:150',
@@ -110,7 +110,9 @@ class MenuController extends Controller
         $imagePath = null;
         if ($request->hasFile('image')) {
             try {
-                $imagePath = $this->fileUpload->uploadImage($request->file('image'), 'dishes');
+                $imagePath = $this->fileUpload->uploadImage(
+                    $request->file('image'), 'dishes'
+                );
             } catch (\Exception $e) {
                 return back()->withErrors(['image' => $e->getMessage()]);
             }
@@ -131,7 +133,7 @@ class MenuController extends Controller
 
     public function toggleDish(Dish $dish)
     {
-        $this->authorize('update', $dish->category->menu);
+        $this->checkOwnership($dish->category->menu);
         $dish->update(['is_available' => !$dish->is_available]);
         $status = $dish->is_available ? 'disponible' : 'indisponible';
         return back()->with('success', "Plat marqué $status.");
@@ -139,9 +141,18 @@ class MenuController extends Controller
 
     public function destroyDish(Dish $dish)
     {
-        $this->authorize('update', $dish->category->menu);
+        $this->checkOwnership($dish->category->menu);
         if ($dish->image) $this->fileUpload->delete($dish->image);
         $dish->delete();
         return back()->with('success', 'Plat supprimé.');
+    }
+
+    // ── Vérification propriété du menu ────────────────
+    private function checkOwnership(Menu $menu): void
+    {
+        $restaurant = auth()->user()->restaurant;
+        if (!$restaurant || $menu->restaurant_id !== $restaurant->id) {
+            abort(403, 'Accès non autorisé.');
+        }
     }
 }

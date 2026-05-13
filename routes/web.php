@@ -1,17 +1,16 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
 
-// ─── Page d'accueil ──────────────────────────────────────
+// ─── Page d'accueil ──────────────────────────────────────────
 Route::get('/', function () {
     return view('welcome');
 });
 
-// ─── Routes Auth (générées par Breeze) ───────────────────
+// ─── Routes Auth (Breeze) ────────────────────────────────────
 require __DIR__.'/auth.php';
 
-// ─── Dashboard Gérant ────────────────────────────────────
+// ─── Dashboard Gérant ────────────────────────────────────────
 Route::middleware(['auth', 'gerant'])
     ->prefix('dashboard')
     ->name('gerant.')
@@ -21,42 +20,62 @@ Route::middleware(['auth', 'gerant'])
     Route::get('/', [App\Http\Controllers\Gerant\DashboardController::class, 'index'])
          ->name('dashboard');
 
-    // Commandes
-    Route::resource('orders', App\Http\Controllers\Gerant\OrderController::class)
-         ->only(['index', 'show', 'update']);
-
-    // Menus
-    Route::resource('menus', App\Http\Controllers\Gerant\MenuController::class);
-
-    // Tables
-    Route::resource('tables', App\Http\Controllers\Gerant\TableController::class);
-
-    // Regénérer QR code d'une table
-    Route::post('/tables/{table}/regenerate',
-        [App\Http\Controllers\Gerant\TableController::class, 'regenerateQr'])
-        ->name('tables.regenerate');
-
-    // Statistiques
-    Route::get('/analytics',
-        [App\Http\Controllers\Gerant\DashboardController::class, 'analytics'])
-         ->name('analytics');
-
     // Restaurant
     Route::get('/restaurant/edit',
         [App\Http\Controllers\Gerant\RestaurantController::class, 'edit'])
          ->name('restaurant.edit');
-
     Route::put('/restaurant',
         [App\Http\Controllers\Gerant\RestaurantController::class, 'update'])
          ->name('restaurant.update');
 
+    // Menus
+    Route::resource('menus', App\Http\Controllers\Gerant\MenuController::class);
+
+    // Catégories
+    Route::post('/menus/{menu}/categories',
+        [App\Http\Controllers\Gerant\MenuController::class, 'storeCategory'])
+        ->name('menus.categories.store');
+    Route::delete('/categories/{category}',
+        [App\Http\Controllers\Gerant\MenuController::class, 'destroyCategory'])
+        ->name('categories.destroy');
+
+    // Plats
+    Route::post('/categories/{category}/dishes',
+        [App\Http\Controllers\Gerant\MenuController::class, 'storeDish'])
+        ->name('categories.dishes.store');
+    Route::patch('/dishes/{dish}/toggle',
+        [App\Http\Controllers\Gerant\MenuController::class, 'toggleDish'])
+        ->name('dishes.toggle');
+    Route::delete('/dishes/{dish}',
+        [App\Http\Controllers\Gerant\MenuController::class, 'destroyDish'])
+        ->name('dishes.destroy');
+
+    // Tables & QR Codes
+    Route::resource('tables', App\Http\Controllers\Gerant\TableController::class);
+    Route::post('/tables/{table}/regenerate',
+        [App\Http\Controllers\Gerant\TableController::class, 'regenerateQr'])
+        ->name('tables.regenerate');
+
+    // Commandes
+    Route::get('/orders',
+        [App\Http\Controllers\Gerant\OrderController::class, 'index'])
+        ->name('orders.index');
+    Route::patch('/orders/{order}/status',
+        [App\Http\Controllers\Gerant\OrderController::class, 'updateStatus'])
+        ->name('orders.updateStatus');
+
+    // Statistiques
+    Route::get('/analytics',
+        [App\Http\Controllers\Gerant\DashboardController::class, 'analytics'])
+        ->name('analytics');
+
     // Abonnement
     Route::get('/subscription',
         [App\Http\Controllers\Gerant\SubscriptionController::class, 'index'])
-         ->name('subscription');
+        ->name('subscription');
 });
 
-// ─── Panel Super Admin ───────────────────────────────────
+// ─── Panel Super Admin ────────────────────────────────────────
 Route::middleware(['auth', 'super_admin'])
     ->prefix('admin')
     ->name('admin.')
@@ -65,17 +84,12 @@ Route::middleware(['auth', 'super_admin'])
     Route::get('/', function () {
         return view('admin.dashboard');
     })->name('dashboard');
-
 });
 
-// ─── Interface Client (QR Code) — sans authentification ──
-Route::get('/menu/{slug}/table/{tableNumber}', function ($slug, $tableNumber) {
-    return view('client.menu', compact('slug', 'tableNumber'));
-})->name('client.menu');
-// ─── Interface Client ─────────────────────────────────────
+// ─── Interface Client (QR Code) ───────────────────────────────
 Route::prefix('menu')->name('client.')->group(function () {
 
-    // Page menu + commande
+    // Page menu
     Route::get('/{slug}/table/{tableNumber}',
         [App\Http\Controllers\Client\MenuController::class, 'show'])
         ->name('menu');
@@ -85,8 +99,24 @@ Route::prefix('menu')->name('client.')->group(function () {
         [App\Http\Controllers\Client\MenuController::class, 'placeOrder'])
         ->name('order');
 
-    // Statut d'une commande
+    // Statut commande
     Route::get('/order/{orderId}/status',
         [App\Http\Controllers\Client\MenuController::class, 'orderStatus'])
         ->name('order.status');
+
+    // Paiement — initier
+    Route::post('/payment/{order}/initiate',
+        [App\Http\Controllers\Client\PaymentController::class, 'initiate'])
+        ->name('payment.initiate');
+
+    // Paiement — retour
+    Route::get('/payment/{order}/return',
+        [App\Http\Controllers\Client\PaymentController::class, 'return'])
+        ->name('payment.return');
+
+    // Paiement — webhook (sans CSRF)
+    Route::post('/payment/notify',
+        [App\Http\Controllers\Client\PaymentController::class, 'notify'])
+        ->name('payment.notify')
+        ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 });

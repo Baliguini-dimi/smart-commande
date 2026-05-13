@@ -11,9 +11,16 @@
     <style>
         * { font-family: 'DM Sans', sans-serif; }
         h1,h2,h3 { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .category-btn.active { background: #1B4FE4; color: white; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         .dish-card { transition: transform 0.15s; }
         .dish-card:active { transform: scale(0.98); }
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen pb-32">
@@ -39,6 +46,7 @@
                     <div class="text-blue-300 text-xs">Table {{ $table->number }}</div>
                 </div>
             </div>
+
             {{-- Bouton panier --}}
             <button onclick="toggleCart()"
                 class="relative bg-white/10 hover:bg-white/20 rounded-xl px-3 py-2
@@ -82,8 +90,7 @@
 
             {{-- Plats --}}
             @foreach($category->dishes as $dish)
-            <div class="dish-card bg-white rounded-2xl border border-gray-100 shadow-sm
-                        mb-3 overflow-hidden flex">
+            <div class="dish-card bg-white rounded-2xl border border-gray-100 shadow-sm mb-3 overflow-hidden flex">
 
                 {{-- Photo --}}
                 <div class="w-24 h-24 flex-shrink-0 bg-gray-100">
@@ -95,7 +102,7 @@
                         <div class="w-full h-full flex items-center justify-center bg-blue-50">
                             <svg class="w-8 h-8 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14"/>
                             </svg>
                         </div>
                     @endif
@@ -185,9 +192,10 @@
             <h3 class="font-bold text-gray-900" style="font-family:'Plus Jakarta Sans',sans-serif">
                 Mon panier
             </h3>
-            <button onclick="toggleCart()" class="text-gray-400 hover:text-gray-600">
+            <button onclick="toggleCart()" class="text-gray-400 hover:text-gray-600 p-1">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </button>
         </div>
@@ -197,9 +205,10 @@
 
         {{-- Note client --}}
         <div class="px-5 pb-2">
-            <textarea id="client-note" rows="2" placeholder="Note pour le restaurant (optionnel)..."
-                class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none
-                       focus:outline-none focus:border-blue-400"></textarea>
+            <textarea id="client-note" rows="2"
+                placeholder="Note pour le restaurant (sans piment, bien cuit...)"
+                class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm
+                       resize-none focus:outline-none focus:border-blue-400"></textarea>
         </div>
 
         {{-- Mode de paiement --}}
@@ -231,7 +240,7 @@
             </div>
             <button onclick="submitOrder()"
                 class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-base
-                       hover:bg-blue-700 transition-colors disabled:opacity-50"
+                       hover:bg-blue-700 transition-colors"
                 id="order-btn">
                 Passer la commande
             </button>
@@ -239,8 +248,9 @@
     </div>
 
     {{-- ═══ CONFIRMATION COMMANDE ═══ --}}
-    <div id="order-success" class="fixed inset-0 bg-white z-50 flex flex-col items-center
-                                    justify-center text-center px-6 hidden">
+    <div id="order-success"
+         class="fixed inset-0 bg-white z-50 flex flex-col items-center
+                justify-center text-center px-6 hidden">
         <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-5">
             <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -256,8 +266,7 @@
         {{-- Statut commande --}}
         <div class="bg-gray-50 rounded-2xl p-4 w-full max-w-xs mb-6">
             <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Statut</p>
-            <div id="order-status-label"
-                 class="text-lg font-bold text-amber-600">
+            <div id="order-status-label" class="text-lg font-bold text-amber-600">
                 En attente
             </div>
         </div>
@@ -267,9 +276,9 @@
 
     {{-- ═══ JAVASCRIPT ═══ --}}
     <script>
-        // ── État du panier ──────────────────────────────
-        let cart     = {};
-        let orderId  = null;
+        // ── État global ─────────────────────────────────
+        let cart    = {};
+        let orderId = null;
 
         // ── Ajouter au panier ───────────────────────────
         function addToCart(dishId, dishName, price) {
@@ -296,10 +305,10 @@
 
         // ── Mettre à jour UI d'un plat ──────────────────
         function updateCartUI(dishId) {
-            const qty = cart[dishId]?.qty || 0;
-            const qtyEl = document.getElementById('qty-' + dishId);
+            const qty        = cart[dishId]?.qty || 0;
+            const qtyEl      = document.getElementById('qty-' + dishId);
             const qtyControl = document.getElementById('qty-control-' + dishId);
-            const addBtn = document.getElementById('add-btn-' + dishId);
+            const addBtn     = document.getElementById('add-btn-' + dishId);
 
             if (qtyEl) qtyEl.textContent = qty;
 
@@ -309,7 +318,7 @@
             }
         }
 
-        // ── Mettre à jour le résumé panier ─────────────
+        // ── Mettre à jour le résumé panier ──────────────
         function updateCartSummary() {
             const count = Object.values(cart).reduce((s, i) => s + i.qty, 0);
             const total = Object.values(cart).reduce((s, i) => s + (i.price * i.qty), 0);
@@ -324,38 +333,39 @@
                 document.getElementById('cart-total-header').classList.remove('hidden');
             }
 
-            // Mettre à jour les articles dans le panel
+            // Articles dans le panel
             const itemsEl = document.getElementById('cart-items');
             if (Object.keys(cart).length === 0) {
                 itemsEl.innerHTML = `
                     <div class="text-center py-8 text-gray-400">
                         <p class="text-sm">Votre panier est vide</p>
+                        <p class="text-xs mt-1">Ajoutez des plats depuis le menu</p>
                     </div>`;
                 return;
             }
 
             itemsEl.innerHTML = Object.entries(cart).map(([id, item]) => `
-                <div class="flex items-center justify-between py-3 border-b border-gray-100">
+                <div class="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
                     <div class="flex-1">
                         <p class="text-sm font-semibold text-gray-800">${item.name}</p>
                         <p class="text-xs text-gray-400">
                             ${new Intl.NumberFormat('fr-FR').format(item.price)} F × ${item.qty}
                         </p>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 mx-3">
                         <button onclick="decreaseQty(${id})"
                             class="w-7 h-7 rounded-lg border border-gray-200 text-gray-600
-                                   hover:bg-gray-100 flex items-center justify-center font-bold">
+                                   hover:bg-gray-100 flex items-center justify-center font-bold text-base">
                             −
                         </button>
                         <span class="text-sm font-bold w-5 text-center">${item.qty}</span>
-                        <button onclick="addToCart(${id}, '${item.name}', ${item.price})"
+                        <button onclick="addToCart(${id}, '${item.name.replace(/'/g, "\\'")}', ${item.price})"
                             class="w-7 h-7 rounded-lg bg-blue-600 text-white
-                                   hover:bg-blue-700 flex items-center justify-center font-bold">
+                                   hover:bg-blue-700 flex items-center justify-center font-bold text-base">
                             +
                         </button>
                     </div>
-                    <div class="text-sm font-bold text-blue-700 ml-3 w-20 text-right">
+                    <div class="text-sm font-bold text-blue-700 w-20 text-right">
                         ${new Intl.NumberFormat('fr-FR').format(item.price * item.qty)} F
                     </div>
                 </div>
@@ -374,12 +384,16 @@
         // ── Défiler vers une catégorie ──────────────────
         function scrollToCategory(catId) {
             const el = document.getElementById(catId);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (el) {
+                const offset = 120;
+                const top    = el.getBoundingClientRect().top + window.scrollY - offset;
+                window.scrollTo({ top, behavior: 'smooth' });
+            }
         }
 
         // ── Appeler le serveur ──────────────────────────
         function callWaiter() {
-            alert('Le serveur a été appelé ! Il arrive bientôt.');
+            alert('Le serveur a été appelé. Il arrive bientôt !');
         }
 
         // ── Soumettre la commande ───────────────────────
@@ -400,13 +414,14 @@
             )?.value || 'cash';
 
             const note = document.getElementById('client-note').value;
+            const btn  = document.getElementById('order-btn');
 
-            const btn = document.getElementById('order-btn');
             btn.disabled    = true;
             btn.textContent = 'Envoi en cours...';
 
             try {
-                const response = await fetch(
+                // ── Étape 1 : Créer la commande ──────────
+                const orderRes = await fetch(
                     '{{ route("client.order", ["slug" => $restaurant->slug, "tableNumber" => $table->number]) }}',
                     {
                         method:  'POST',
@@ -424,21 +439,46 @@
                     }
                 );
 
-                const data = await response.json();
+                const orderData = await orderRes.json();
 
-                if (data.success) {
-                    orderId = data.order_id;
-                    document.getElementById('order-success').classList.remove('hidden');
-                    document.getElementById('cart-panel').classList.add('translate-y-full');
-                    document.getElementById('cart-overlay').classList.add('hidden');
-                    startStatusPolling();
-                } else {
-                    alert('Une erreur est survenue. Réessayez.');
-                    btn.disabled    = false;
-                    btn.textContent = 'Passer la commande';
+                if (!orderData.success) {
+                    throw new Error(orderData.message || 'Erreur lors de la commande');
                 }
+
+                orderId = orderData.order_id;
+
+                // ── Étape 2 : Paiement Mobile Money ──────
+                if (paymentMethod !== 'cash') {
+                    const payRes = await fetch(`/menu/payment/${orderId}/initiate`, {
+                        method:  'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector(
+                                'meta[name="csrf-token"]'
+                            ).content,
+                        },
+                        body: JSON.stringify({}),
+                    });
+
+                    const payData = await payRes.json();
+
+                    if (payData.success && payData.payment_url) {
+                        // Redirige vers CinetPay
+                        window.location.href = payData.payment_url;
+                        return;
+                    }
+                }
+
+                // ── Étape 3 : Cash ou succès ─────────────
+                document.getElementById('order-success').classList.remove('hidden');
+                document.getElementById('cart-panel').classList.add('translate-y-full');
+                document.getElementById('cart-overlay').classList.add('hidden');
+                cart = {};
+                updateCartSummary();
+                startStatusPolling();
+
             } catch (error) {
-                alert('Erreur de connexion. Vérifiez votre connexion internet.');
+                alert('Erreur : ' + error.message);
                 btn.disabled    = false;
                 btn.textContent = 'Passer la commande';
             }
@@ -466,7 +506,7 @@
                     const res  = await fetch(`/menu/order/${orderId}/status`);
                     const data = await res.json();
 
-                    const el = document.getElementById('order-status-label');
+                    const el   = document.getElementById('order-status-label');
                     el.textContent = labels[data.status] || data.status;
                     el.className   = 'text-lg font-bold ' + (colors[data.status] || 'text-gray-700');
 
@@ -474,10 +514,10 @@
                 } catch (e) {
                     console.error('Erreur statut:', e);
                 }
-            }, 8000); // Vérifie toutes les 8 secondes
+            }, 8000);
         }
 
-        // Init panier vide
+        // ── Initialisation ──────────────────────────────
         updateCartSummary();
     </script>
 </body>
