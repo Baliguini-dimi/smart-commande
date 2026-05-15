@@ -81,11 +81,18 @@ Route::middleware(['auth', 'super_admin'])
     ->name('admin.')
     ->group(function () {
 
-    Route::get('/', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
-});
+    Route::get('/',
+        [App\Http\Controllers\Admin\DashboardController::class, 'index'])
+        ->name('dashboard');
 
+    Route::get('/restaurants',
+        [App\Http\Controllers\Admin\RestaurantController::class, 'index'])
+        ->name('restaurants.index');
+
+    Route::patch('/restaurants/{restaurant}/toggle',
+        [App\Http\Controllers\Admin\RestaurantController::class, 'toggle'])
+        ->name('restaurants.toggle');
+});
 // ─── Interface Client (QR Code) ───────────────────────────────
 Route::prefix('menu')->name('client.')->group(function () {
 
